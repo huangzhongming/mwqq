@@ -125,12 +125,12 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
 PASSPORT_PHOTO_SETTINGS = {
     'TEMP_STORAGE_HOURS': 24,
     'MAX_FILE_SIZE': 10485760,  # 10MB
-    'ALLOWED_FORMATS': ['JPEG', 'JPG', 'PNG', 'WEBP'],
+    'ALLOWED_FORMATS': ['JPEG', 'JPG', 'PNG', 'WEBP', 'MPO'],  # MPO for Sony camera files
     'OUTPUT_QUALITY': 95,
     'OUTPUT_DPI': 300,
     
     # Background Removal Configuration
-    'BACKGROUND_REMOVAL_MODEL': 'u2net',  # Options: 'u2net' (default), 'birefnet-portrait' (best quality, slow), 'u2netp' (fast), 'u2net-human-seg' (optimized for humans)
+    'BACKGROUND_REMOVAL_MODEL': 'isnet-general-use',  # Options: 'u2net' (default), 'isnet-general-use', 'birefnet-portrait' (best quality, slow), 'u2netp' (fast), 'u2net-human-seg' (optimized for humans)
     
     # Face Detection Configuration
     'YOLO_FACE_MODEL_PATH': '/tmp/yolov8n-face.pt',  # YapaLab YOLO-face model location

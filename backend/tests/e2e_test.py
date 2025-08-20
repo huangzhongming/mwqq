@@ -22,7 +22,7 @@ class PassportPhotoE2ETest:
     def __init__(self):
         self.base_url = "http://localhost:8000"
         self.api_url = f"{self.base_url}/api/v1"
-        self.test_image = "/Users/zhongminghuang/github/mwqq/tmp/wy_small.jpg"
+        self.test_image = "/Users/zhongminghuang/github/mwqq/tmp/hzm_origin.jpg"  # Sony camera file
         self.results = []
         
     def log_result(self, test_name, success, message, details=None):
@@ -142,8 +142,11 @@ class PassportPhotoE2ETest:
                     print(f"   📊 Attempt {attempt}/{max_attempts}: Status = {status}")
                     
                     if status == 'completed':
-                        result_url = status_data.get('result_url')
+                        result_url = status_data.get('result_url') or status_data.get('processed_photo_url')
                         if result_url:
+                            # Extract just the path part if it's a full URL
+                            if result_url.startswith('http'):
+                                result_url = result_url.replace(self.base_url, '')
                             self.log_result("Job Processing", True, f"Processing completed in {attempt * poll_interval}s")
                             return result_url
                         else:

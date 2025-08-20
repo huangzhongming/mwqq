@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from PIL import Image, ImageEnhance
+from PIL import Image, ImageEnhance, ImageOps
 from rembg import remove, new_session
 from ultralytics import YOLO
 import io
@@ -399,11 +399,39 @@ class PassportPhotoProcessor:
     def create_passport_photo(self, image_bytes, country_specs):
         """Process image to create passport photo with proper head centering and scaling"""
         try:
-            # Load image
+            # Load and preprocess image
             image = Image.open(io.BytesIO(image_bytes))
             
-            # Remove background (this may also rotate/correct the image)
-            no_bg_bytes = self.remove_background(image_bytes)
+            # Handle EXIF orientation (important for camera photos)
+            image = ImageOps.exif_transpose(image)
+            
+            # Handle large images - resize if too big for performance
+            max_dimension = 3000  # Max width or height
+            if max(image.size) > max_dimension:
+                ratio = max_dimension / max(image.size)
+                new_size = (int(image.size[0] * ratio), int(image.size[1] * ratio))
+                image = image.resize(new_size, Image.Resampling.LANCZOS)
+                print(f"📏 Resized large image to {new_size[0]}×{new_size[1]} for processing")
+            
+            # Convert to RGB if needed (handle various formats)
+            if image.mode in ('RGBA', 'LA'):
+                # Create white background for transparent images
+                rgb_image = Image.new('RGB', image.size, (255, 255, 255))
+                if image.mode == 'RGBA':
+                    rgb_image.paste(image, mask=image.split()[3])
+                else:  # LA mode
+                    rgb_image.paste(image, mask=image.split()[1])
+                image = rgb_image
+            elif image.mode != 'RGB':
+                image = image.convert('RGB')
+            
+            # Convert back to bytes for background removal
+            processed_bytes = io.BytesIO()
+            image.save(processed_bytes, format='JPEG', quality=95)
+            processed_bytes.seek(0)
+            
+            # Remove background
+            no_bg_bytes = self.remove_background(processed_bytes.getvalue())
             no_bg_image = Image.open(io.BytesIO(no_bg_bytes))
             
             # Detect face on the background-removed image (properly oriented)
@@ -573,10 +601,10 @@ class PassportPhotoProcessor:
             # Check if it's a valid image
             image = Image.open(image_file)
             
-            # Check format - PIL reports JPEG for both .jpg and .jpeg files
-            allowed_formats = ['JPEG', 'PNG', 'WEBP']
+            # Check format - PIL reports various formats including MPO for Sony cameras
+            allowed_formats = ['JPEG', 'PNG', 'WEBP', 'MPO']
             if image.format not in allowed_formats:
-                raise Exception(f"Unsupported format. Allowed formats: JPEG, PNG, WEBP")
+                raise Exception(f"Unsupported format '{image.format}'. Allowed formats: JPEG, PNG, WEBP, MPO (Sony cameras)")
             
             # Check dimensions (minimum requirements)
             if image.width < 200 or image.height < 200:
