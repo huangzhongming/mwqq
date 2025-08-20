@@ -99,10 +99,25 @@ REST_FRAMEWORK = {
     ],
 }
 
-CORS_ALLOW_ALL_ORIGINS = DEBUG
+CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins for development
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:3001",  # Alternative port
+]
+
+# Additional CORS settings for better compatibility
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
 ]
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
@@ -115,7 +130,7 @@ PASSPORT_PHOTO_SETTINGS = {
     'OUTPUT_DPI': 300,
     
     # Background Removal Configuration
-    'BACKGROUND_REMOVAL_MODEL': 'u2net-human-seg',  # Options: 'u2net' (default), 'birefnet-portrait' (best quality, slow), 'u2netp' (fast), 'u2net-human-seg' (optimized for humans)
+    'BACKGROUND_REMOVAL_MODEL': 'u2net',  # Options: 'u2net' (default), 'birefnet-portrait' (best quality, slow), 'u2netp' (fast), 'u2net-human-seg' (optimized for humans)
     
     # Face Detection Configuration
     'YOLO_FACE_MODEL_PATH': '/tmp/yolov8n-face.pt',  # YapaLab YOLO-face model location
