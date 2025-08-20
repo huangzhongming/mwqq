@@ -88,6 +88,7 @@ def process_photo_background(job_id):
             'photo_width': job.country.photo_width,
             'photo_height': job.country.photo_height,
             'face_height_ratio': job.country.face_height_ratio,
+            'country_code': job.country.code,
         }
         
         # Process the photo

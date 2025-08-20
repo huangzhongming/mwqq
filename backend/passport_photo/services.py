@@ -54,7 +54,7 @@ class PassportPhotoProcessor:
         except Exception as e:
             raise Exception(f"Face detection failed: {str(e)}")
     
-    def calculate_optimal_scale_and_position(self, face_bbox, image_size, target_size, face_height_ratio):
+    def calculate_optimal_scale_and_position(self, face_bbox, image_size, target_size, face_height_ratio, country_code=None):
         """Calculate optimal scaling and positioning for perfect head centering"""
         x1, y1, x2, y2 = face_bbox
         img_width, img_height = image_size
@@ -66,7 +66,11 @@ class PassportPhotoProcessor:
         face_center_x = x1 + face_width / 2
         face_center_y = y1 + face_height / 2
         
-        # Target specifications
+        # Special handling for Finland's strict requirements
+        if country_code == 'FI':
+            return self._calculate_finnish_positioning(face_bbox, image_size, target_size)
+        
+        # Standard positioning for other countries
         target_face_height = target_height * face_height_ratio
         target_head_center_x = target_width / 2
         target_head_center_y = target_height * 0.35  # 35% from top
@@ -108,6 +112,52 @@ class PassportPhotoProcessor:
             'face_center': (face_center_x, face_center_y)
         }
     
+    def _calculate_finnish_positioning(self, face_bbox, image_size, target_size):
+        """Calculate positioning specifically for Finnish passport requirements"""
+        x1, y1, x2, y2 = face_bbox
+        img_width, img_height = image_size
+        target_width, target_height = target_size  # 500 x 653
+        
+        # Finnish specific requirements
+        # Head size: 445-500 px (crown to chin), using upper range for better compliance
+        # Top margin: 56-84 px (using optimal 70px)
+        # Bottom margin: 96-124 px (using optimal 110px)
+        
+        face_width = x2 - x1
+        face_height = y2 - y1
+        face_center_x = x1 + face_width / 2
+        face_center_y = y1 + face_height / 2
+        
+        # Target face height for Finland - use 485px (closer to max for better visibility)
+        # The detected face is typically smaller than the full head, so we need to scale more
+        target_face_height = 485  # Higher in the 445-500px range
+        
+        # Finnish positioning: center horizontally, optimal vertical placement
+        target_head_center_x = target_width / 2  # 250px
+        # Crown should be at ~70px from top, chin at ~555px from top
+        # So face center should be at ~312.5px from top
+        target_head_center_y = 70 + (target_face_height / 2)  # ~312.5px
+        
+        # Calculate scale based on face height - be more aggressive with scaling
+        # YOLO face detection often underestimates the full head size
+        base_scale = target_face_height / face_height
+        
+        # For Finnish requirements, we need to be less conservative
+        # Remove the restrictive max_scale limits for better head size
+        max_scale = min(
+            (target_width * 1.2) / face_width,  # Allow wider faces
+            (target_height * 1.0) / (face_height * 1.2)  # Less restrictive height limit
+        )
+        
+        # Use the base scale more aggressively for Finnish compliance
+        final_scale = min(base_scale * 1.15, max_scale)  # 15% boost for better head size
+        
+        return {
+            'scale': final_scale,
+            'target_head_center': (target_head_center_x, target_head_center_y),
+            'face_center': (face_center_x, face_center_y)
+        }
+    
     def create_passport_photo(self, image_bytes, country_specs):
         """Process image to create passport photo with proper head centering and scaling"""
         try:
@@ -135,13 +185,14 @@ class PassportPhotoProcessor:
             target_width = country_specs['photo_width']
             target_height = country_specs['photo_height']
             face_height_ratio = country_specs['face_height_ratio']
+            country_code = country_specs.get('country_code')
             
             # Calculate optimal scaling and positioning
             image_size = (no_bg_image.width, no_bg_image.height)
             target_size = (target_width, target_height)
             
             optimization = self.calculate_optimal_scale_and_position(
-                face_bbox, image_size, target_size, face_height_ratio
+                face_bbox, image_size, target_size, face_height_ratio, country_code
             )
             
             scale = optimization['scale']
@@ -226,7 +277,11 @@ class PassportPhotoProcessor:
             contrast_enhancer = ImageEnhance.Contrast(final_image)
             final_image = contrast_enhancer.enhance(1.05)
             
-            # Convert to bytes
+            # Finnish-specific output requirements
+            if country_code == 'FI':
+                return self._create_finnish_output(final_image)
+            
+            # Convert to bytes for other countries
             output = io.BytesIO()
             final_image.save(
                 output,
@@ -241,6 +296,33 @@ class PassportPhotoProcessor:
             
         except Exception as e:
             raise Exception(f"Photo processing failed: {str(e)}")
+    
+    def _create_finnish_output(self, image):
+        """Create output specifically for Finnish passport requirements"""
+        # Finnish requirements: exactly 500x653 pixels, max 250KB
+        output = io.BytesIO()
+        
+        # Start with high quality and reduce if file size exceeds 250KB
+        quality = 95
+        while quality > 60:  # Don't go below reasonable quality
+            output.seek(0)
+            output.truncate()
+            
+            image.save(
+                output,
+                format='JPEG',
+                quality=quality,
+                optimize=True
+            )
+            
+            file_size = output.tell()
+            if file_size <= 250 * 1024:  # 250KB limit
+                break
+            
+            quality -= 5
+        
+        output.seek(0)
+        return output.getvalue()
     
     def validate_image(self, image_file):
         """Validate uploaded image"""
