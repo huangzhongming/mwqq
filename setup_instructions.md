@@ -147,6 +147,9 @@ PASSPORT_PHOTO_SETTINGS = {
     'OUTPUT_QUALITY': 95,
     'OUTPUT_DPI': 300,
     
+    # Background Removal Configuration
+    'BACKGROUND_REMOVAL_MODEL': 'u2net-human-seg',  # Options: 'u2net' (default), 'birefnet-portrait' (best quality, slow), 'u2netp' (fast), 'u2net-human-seg' (optimized for humans)
+    
     # Face Detection Configuration
     'YOLO_FACE_MODEL_PATH': '/tmp/yolov8n-face.pt',  # YapaLab model location
     
@@ -166,7 +169,20 @@ PASSPORT_PHOTO_SETTINGS = {
 }
 ```
 
-## 🔧 Fine-tuning Head Expansion
+## 🔧 Fine-tuning Configuration
+
+### Background Removal Models
+
+The `BACKGROUND_REMOVAL_MODEL` setting controls which AI model is used for background removal:
+
+- **u2net**: Default model, fast general-purpose background removal
+- **u2net-human-seg**: Optimized for human segmentation, **good balance of speed and quality** (default)
+- **u2netp**: Lighter/faster version of u2net
+- **birefnet-portrait**: Best quality for portraits but very slow (30-60s per image)
+
+**For passport photos, `u2net-human-seg` provides the best balance of speed and quality for human subjects.**
+
+### Head Expansion Ratios
 
 The `HEAD_EXPANSION.YOLO_FACE` setting controls how much the detected face area is expanded to include the full head:
 
@@ -175,13 +191,16 @@ The `HEAD_EXPANSION.YOLO_FACE` setting controls how much the detected face area 
 - **1.4**: More conservative, shows more forehead/hair (default)
 - **1.5**: Maximum expansion, includes neck/shoulders
 
-### Testing Different Ratios
+### Testing Different Settings
 
 ```python
 # In Django shell (python manage.py shell)
 from django.conf import settings
 
-# Temporarily override for testing
+# Test background removal model
+settings.PASSPORT_PHOTO_SETTINGS['BACKGROUND_REMOVAL_MODEL'] = 'u2net-human-seg'
+
+# Test head expansion ratio
 settings.PASSPORT_PHOTO_SETTINGS['HEAD_EXPANSION']['YOLO_FACE'] = 1.3
 
 # Process your test images and compare results
@@ -309,20 +328,39 @@ const status = await statusResponse.json();
 
 ## Troubleshooting
 
-1. **AI Models not downloading:**
+### Common Issues
+
+1. **Head edges appear blurred/soft:**
+   - **Cause**: Default u2net model can create soft edges around hair and face contours
+   - **Solution**: Switch to `birefnet-portrait` model in settings:
+     ```python
+     PASSPORT_PHOTO_SETTINGS = {
+         'BACKGROUND_REMOVAL_MODEL': 'birefnet-portrait',
+         # ... other settings
+     }
+     ```
+   - **Note**: First use will be slower as the model downloads (~973MB)
+
+2. **AI Models not downloading:**
    - First run might be slow as models download automatically
    - Ensure internet connection for model downloads
+   - BiRefNet models are large (up to 1GB) - allow time for download
 
-2. **MySQL connection issues:**
+3. **MySQL connection issues:**
    - Verify MySQL is running
    - Check database credentials in .env
    - Ensure database exists
 
-3. **CORS issues:**
+4. **CORS issues:**
    - Check CORS_ALLOWED_ORIGINS in Django settings
    - Ensure frontend URL is included
 
-4. **File upload issues:**
+5. **File upload issues:**
    - Check file size limits (10MB max)
    - Verify MEDIA_ROOT permissions
    - Ensure supported file formats (JPEG, PNG, WEBP)
+
+6. **Background removal taking too long:**
+   - BiRefNet models are more accurate but slower than u2net
+   - For faster processing, use `u2netp` or default `u2net`
+   - Consider reducing image size before processing for development

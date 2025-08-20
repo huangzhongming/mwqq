@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from PIL import Image, ImageEnhance
-from rembg import remove
+from rembg import remove, new_session
 from ultralytics import YOLO
 import io
 from django.core.files.base import ContentFile
@@ -25,12 +25,38 @@ class PassportPhotoProcessor:
             except Exception as e2:
                 print(f"Failed to load any YOLO model: {e2}")
                 self.yolo_face_model = None
+        
+        # Lazy load background removal session (initialize on first use)
+        self.bg_removal_session = None
+        self._bg_model = settings.PASSPORT_PHOTO_SETTINGS.get('BACKGROUND_REMOVAL_MODEL', 'u2net')
+        self._bg_session_initialized = False
+    
+    def _initialize_bg_session(self):
+        """Initialize background removal session on first use"""
+        if not self._bg_session_initialized:
+            self._bg_session_initialized = True
+            if self._bg_model != 'u2net':  # u2net is the default, no session needed
+                try:
+                    print(f"🔄 Initializing {self._bg_model} background removal model...")
+                    self.bg_removal_session = new_session(self._bg_model)
+                    print(f"✓ Loaded {self._bg_model} background removal model")
+                except Exception as e:
+                    print(f"⚠️ Failed to load {self._bg_model} model, using default u2net: {e}")
+                    self.bg_removal_session = None
     
     def remove_background(self, image_bytes):
-        """Remove background from image using rembg"""
+        """Remove background from image using configured rembg model"""
         try:
-            # Remove background
-            output = remove(image_bytes)
+            # Initialize session on first use (lazy loading)
+            self._initialize_bg_session()
+            
+            # Use configured background removal model
+            if self.bg_removal_session:
+                # Use specific model session (e.g., birefnet-portrait)
+                output = remove(image_bytes, session=self.bg_removal_session)
+            else:
+                # Use default u2net model
+                output = remove(image_bytes)
             return output
         except Exception as e:
             raise Exception(f"Background removal failed: {str(e)}")
