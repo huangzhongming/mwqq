@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { apiService } from './services/api';
 import { Country, PhotoProcessingJob } from './types';
@@ -15,11 +15,21 @@ const App: React.FC = () => {
   const [currentJob, setCurrentJob] = useState<PhotoProcessingJob | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isPolling, setIsPolling] = useState(false);
+  const [, setIsPolling] = useState(false);
+
+  const loadCountries = useCallback(async () => {
+    try {
+      const countriesData = await apiService.getCountries();
+      setCountries(countriesData);
+    } catch (error) {
+      console.error('Error loading countries:', error);
+      setError(t('errors.loadCountriesFailed'));
+    }
+  }, [t]);
 
   useEffect(() => {
     loadCountries();
-  }, []);
+  }, [loadCountries]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -46,16 +56,6 @@ const App: React.FC = () => {
       setIsPolling(false);
     };
   }, [currentJob]);
-
-  const loadCountries = async () => {
-    try {
-      const countriesData = await apiService.getCountries();
-      setCountries(countriesData);
-    } catch (error) {
-      console.error('Error loading countries:', error);
-      setError(t('errors.loadCountriesFailed'));
-    }
-  };
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
