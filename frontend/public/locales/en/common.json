@@ -1,0 +1,52 @@
+{
+  "app": {
+    "title": "AI Passport Photo Generator",
+    "subtitle": "Upload your photo and get a professional passport photo in minutes"
+  },
+  "fileUpload": {
+    "title": "Upload your photo",
+    "dragActive": "Drop your photo here",
+    "dragInactive": "Drag and drop or click to select",
+    "fileTypes": "JPEG, PNG, WEBP up to 10MB",
+    "fileSize": "MB",
+    "replace": "Click or drag to replace"
+  },
+  "countrySelector": {
+    "label": "Select Target Country/Document",
+    "placeholder": "Choose a country...",
+    "specifications": "Photo Specifications:",
+    "dimensions": "Dimensions:",
+    "pixels": "pixels",
+    "faceHeightRatio": "Face Height Ratio:",
+    "ofTotalHeight": "% of total height"
+  },
+  "processing": {
+    "title": "Processing Status",
+    "pending": "Your photo is in the queue...",
+    "processing": "Processing your passport photo...",
+    "completed": "Your passport photo is ready!",
+    "failed": "Processing failed. Please try again.",
+    "unknownStatus": "Unknown status",
+    "downloadPhoto": "Download Photo",
+    "createAnother": "Create Another Photo",
+    "country": "Country:",
+    "dimensions": "Dimensions:",
+    "started": "Started:"
+  },
+  "button": {
+    "generatePhoto": "Generate Passport Photo",
+    "uploading": "Uploading..."
+  },
+  "features": {
+    "backgroundRemoval": "✓ Background removal with AI",
+    "faceDetection": "✓ Face detection and positioning", 
+    "countrySizing": "✓ Country-specific sizing",
+    "highQuality": "✓ High-quality output (300 DPI)"
+  },
+  "errors": {
+    "selectBoth": "Please select both a photo and a country.",
+    "uploadFailed": "Upload failed. Please try again.",
+    "loadCountriesFailed": "Failed to load countries. Please refresh the page.",
+    "pollingError": "Error polling job status:"
+  }
+}

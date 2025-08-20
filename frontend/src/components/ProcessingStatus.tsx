@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { PhotoProcessingJob } from '../types';
 
 interface ProcessingStatusProps {
@@ -8,6 +9,7 @@ interface ProcessingStatusProps {
 }
 
 const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ job, onDownload, onStartOver }) => {
+  const { t } = useTranslation();
   const getStatusIcon = () => {
     switch (job.status) {
       case 'pending':
@@ -42,15 +44,15 @@ const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ job, onDownload, on
   const getStatusMessage = () => {
     switch (job.status) {
       case 'pending':
-        return 'Your photo is in the queue...';
+        return t('processing.pending');
       case 'processing':
-        return 'Processing your passport photo...';
+        return t('processing.processing');
       case 'completed':
-        return 'Your passport photo is ready!';
+        return t('processing.completed');
       case 'failed':
-        return job.error_message || 'Processing failed. Please try again.';
+        return job.error_message || t('processing.failed');
       default:
-        return 'Unknown status';
+        return t('processing.unknownStatus');
     }
   };
 
@@ -78,7 +80,7 @@ const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ job, onDownload, on
           
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Processing Status
+              {t('processing.title')}
             </h3>
             <p className={`text-sm ${getStatusColor()}`}>
               {getStatusMessage()}
@@ -90,7 +92,7 @@ const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ job, onDownload, on
               <div className="border rounded-lg p-4 bg-gray-50">
                 <img
                   src={job.processed_photo_url}
-                  alt="Processed passport photo"
+                  alt="Processed passport"
                   className="max-w-full h-auto mx-auto rounded"
                   style={{ maxHeight: '300px' }}
                 />
@@ -103,7 +105,7 @@ const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ job, onDownload, on
                   className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-center font-medium"
                   onClick={onDownload}
                 >
-                  Download Photo
+                  {t('processing.downloadPhoto')}
                 </a>
               </div>
             </div>
@@ -111,9 +113,9 @@ const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ job, onDownload, on
 
           <div className="pt-4 border-t border-gray-200">
             <div className="text-xs text-gray-500 space-y-1">
-              <p>Country: {job.country.name}</p>
-              <p>Dimensions: {job.country.photo_width} × {job.country.photo_height}px</p>
-              <p>Started: {new Date(job.created_at).toLocaleString()}</p>
+              <p>{t('processing.country')} {job.country.name}</p>
+              <p>{t('processing.dimensions')} {job.country.photo_width} × {job.country.photo_height}px</p>
+              <p>{t('processing.started')} {new Date(job.created_at).toLocaleString()}</p>
             </div>
           </div>
 
@@ -122,7 +124,7 @@ const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ job, onDownload, on
               onClick={onStartOver}
               className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-200 transition-colors font-medium"
             >
-              Create Another Photo
+              {t('processing.createAnother')}
             </button>
           )}
         </div>

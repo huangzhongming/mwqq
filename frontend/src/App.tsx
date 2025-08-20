@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiService } from './services/api';
 import { Country, PhotoProcessingJob } from './types';
 import FileUpload from './components/FileUpload';
 import CountrySelector from './components/CountrySelector';
 import ProcessingStatus from './components/ProcessingStatus';
+import LanguageSwitch from './components/LanguageSwitch';
 
 const App: React.FC = () => {
+  const { t } = useTranslation();
   const [countries, setCountries] = useState<Country[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
@@ -50,7 +53,7 @@ const App: React.FC = () => {
       setCountries(countriesData);
     } catch (error) {
       console.error('Error loading countries:', error);
-      setError('Failed to load countries. Please refresh the page.');
+      setError(t('errors.loadCountriesFailed'));
     }
   };
 
@@ -66,7 +69,7 @@ const App: React.FC = () => {
 
   const handleUpload = async () => {
     if (!selectedFile || !selectedCountry) {
-      setError('Please select both a photo and a country.');
+      setError(t('errors.selectBoth'));
       return;
     }
 
@@ -81,7 +84,7 @@ const App: React.FC = () => {
       
     } catch (error: any) {
       console.error('Upload error:', error);
-      setError(error.response?.data?.error || 'Upload failed. Please try again.');
+      setError(error.response?.data?.error || t('errors.uploadFailed'));
     } finally {
       setIsUploading(false);
     }
@@ -101,7 +104,10 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="container mx-auto px-4">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">AI Passport Photo Generator</h1>
+            <div className="flex justify-between items-center mb-4">
+              <h1 className="text-3xl font-bold text-gray-900">{t('app.title')}</h1>
+              <LanguageSwitch />
+            </div>
           </div>
           <ProcessingStatus
             job={currentJob}
@@ -116,12 +122,17 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4 max-w-2xl">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            AI Passport Photo Generator
-          </h1>
-          <p className="text-gray-600">
-            Upload your photo and get a professional passport photo in minutes
-          </p>
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                {t('app.title')}
+              </h1>
+              <p className="text-gray-600">
+                {t('app.subtitle')}
+              </p>
+            </div>
+            <LanguageSwitch />
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-6 space-y-6">
@@ -158,14 +169,14 @@ const App: React.FC = () => {
             disabled={!canUpload}
             className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
           >
-            {isUploading ? 'Uploading...' : 'Generate Passport Photo'}
+            {isUploading ? t('button.uploading') : t('button.generatePhoto')}
           </button>
 
           <div className="text-center text-sm text-gray-500">
-            <p>✓ Background removal with AI</p>
-            <p>✓ Face detection and positioning</p>
-            <p>✓ Country-specific sizing</p>
-            <p>✓ High-quality output (300 DPI)</p>
+            <p>{t('features.backgroundRemoval')}</p>
+            <p>{t('features.faceDetection')}</p>
+            <p>{t('features.countrySizing')}</p>
+            <p>{t('features.highQuality')}</p>
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
+import { useTranslation } from 'react-i18next';
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
@@ -8,6 +9,7 @@ interface FileUploadProps {
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, selectedFile, disabled = false }) => {
+  const { t } = useTranslation();
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
       onFileSelect(acceptedFiles[0]);
@@ -49,12 +51,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, selectedFile, dis
           <div>
             <p className="font-medium text-gray-900">{selectedFile.name}</p>
             <p className="text-sm text-gray-500">
-              {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+              {(selectedFile.size / 1024 / 1024).toFixed(2)} {t('fileUpload.fileSize')}
             </p>
           </div>
           {!disabled && (
             <p className="text-sm text-gray-500">
-              Click or drag to replace
+              {t('fileUpload.replace')}
             </p>
           )}
         </div>
@@ -67,16 +69,16 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, selectedFile, dis
           </div>
           <div>
             <p className="text-lg font-medium text-gray-900">
-              Upload your photo
+              {t('fileUpload.title')}
             </p>
             <p className="text-sm text-gray-500 mt-1">
               {isDragActive
-                ? "Drop your photo here"
-                : "Drag and drop or click to select"
+                ? t('fileUpload.dragActive')
+                : t('fileUpload.dragInactive')
               }
             </p>
             <p className="text-xs text-gray-400 mt-2">
-              JPEG, PNG, WEBP up to 10MB
+              {t('fileUpload.fileTypes')}
             </p>
           </div>
         </div>

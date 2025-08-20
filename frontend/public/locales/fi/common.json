@@ -1,0 +1,52 @@
+{
+  "app": {
+    "title": "Tekoäly Passikuvageneraattori",
+    "subtitle": "Lataa kuvasi ja saa ammattimainen passikuva minuuteissa"
+  },
+  "fileUpload": {
+    "title": "Lataa kuvasi",
+    "dragActive": "Pudota kuvasi tähän",
+    "dragInactive": "Vedä ja pudota tai klikkaa valitaksesi",
+    "fileTypes": "JPEG, PNG, WEBP enintään 10MB",
+    "fileSize": "MB",
+    "replace": "Klikkaa tai vedä korvataksesi"
+  },
+  "countrySelector": {
+    "label": "Valitse kohdemaasaani/asiakirja",
+    "placeholder": "Valitse maa...",
+    "specifications": "Kuvan vaatimukset:",
+    "dimensions": "Mitat:",
+    "pixels": "pikseliä",
+    "faceHeightRatio": "Kasvojen korkeus suhde:",
+    "ofTotalHeight": "% kokonaiskorkeudesta"
+  },
+  "processing": {
+    "title": "Käsittelyn tila",
+    "pending": "Kuvasi on jonossa...",
+    "processing": "Käsitellään passikuvaasi...",
+    "completed": "Passikuvasi on valmis!",
+    "failed": "Käsittely epäonnistui. Yritä uudelleen.",
+    "unknownStatus": "Tuntematon tila",
+    "downloadPhoto": "Lataa kuva",
+    "createAnother": "Luo toinen kuva",
+    "country": "Maa:",
+    "dimensions": "Mitat:",
+    "started": "Aloitettu:"
+  },
+  "button": {
+    "generatePhoto": "Luo passikuva",
+    "uploading": "Ladataan..."
+  },
+  "features": {
+    "backgroundRemoval": "✓ Taustan poisto tekoälyllä",
+    "faceDetection": "✓ Kasvojen tunnistus ja asemointi",
+    "countrySizing": "✓ Maakohtainen koko",
+    "highQuality": "✓ Korkealaatuinen tuotos (300 DPI)"
+  },
+  "errors": {
+    "selectBoth": "Valitse sekä kuva että maa.",
+    "uploadFailed": "Lataus epäonnistui. Yritä uudelleen.",
+    "loadCountriesFailed": "Maiden lataus epäonnistui. Päivitä sivu.",
+    "pollingError": "Virhe työn tilan tarkistuksessa:"
+  }
+}
