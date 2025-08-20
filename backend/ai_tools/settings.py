@@ -113,4 +113,17 @@ PASSPORT_PHOTO_SETTINGS = {
     'ALLOWED_FORMATS': ['JPEG', 'JPG', 'PNG', 'WEBP'],
     'OUTPUT_QUALITY': 95,
     'OUTPUT_DPI': 300,
+    
+    # Face Detection Configuration
+    'YOLO_FACE_MODEL_PATH': '/tmp/yolov8n-face.pt',  # YapaLab YOLO-face model location
+    'HEAD_EXPANSION': {
+        'YOLO_FACE': 1.4,    # Expansion ratio for YapaLab YOLO-face detection (1.2-1.5 recommended)
+        'OPENCV_HAAR': 1.3,  # Expansion ratio for OpenCV Haar Cascade detection
+        'YOLO_PERSON': 0.28, # Head height ratio for YOLO person detection fallback
+    },
+    'FACE_DETECTION_CONFIDENCE': {
+        'YOLO_FACE': 0.3,    # Minimum confidence for YapaLab YOLO-face (lower = more permissive)
+        'OPENCV_HAAR': 0.5,  # Minimum confidence equivalent for OpenCV
+        'YOLO_PERSON': 0.5,  # Minimum confidence for YOLO person detection
+    },
 }

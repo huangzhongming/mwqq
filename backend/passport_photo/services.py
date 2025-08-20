@@ -9,12 +9,22 @@ from django.conf import settings
 
 class PassportPhotoProcessor:
     def __init__(self):
-        # Load YOLO model for face detection (using YOLOv8n for speed)
+        # Load YapaLab YOLO-face model for accurate face detection
+        model_path = settings.PASSPORT_PHOTO_SETTINGS.get('YOLO_FACE_MODEL_PATH', '/tmp/yolov8n-face.pt')
+        
         try:
-            self.face_model = YOLO('yolov8n-face.pt')
-        except:
-            # Fallback to standard YOLO if face model not available
-            self.face_model = YOLO('yolov8n.pt')
+            # Try YapaLab face model first (most accurate)
+            self.yolo_face_model = YOLO(model_path)
+            print(f"✓ Loaded YapaLab YOLOv8n-face model from {model_path}")
+        except Exception as e:
+            print(f"Failed to load YapaLab face model from {model_path}: {e}")
+            try:
+                # Fallback to standard YOLO
+                self.yolo_face_model = YOLO('yolov8n.pt')
+                print("✓ Loaded standard YOLOv8n model as fallback")
+            except Exception as e2:
+                print(f"Failed to load any YOLO model: {e2}")
+                self.yolo_face_model = None
     
     def remove_background(self, image_bytes):
         """Remove background from image using rembg"""
@@ -26,13 +36,55 @@ class PassportPhotoProcessor:
             raise Exception(f"Background removal failed: {str(e)}")
     
     def detect_face(self, image):
-        """Detect face using YOLO model"""
+        """Detect face using best available method: YapaLab YOLO-face > OpenCV Haar > YOLO person"""
         try:
+            # Ensure image is RGB
+            if image.mode == 'RGBA':
+                rgb_image = Image.new('RGB', image.size, (255, 255, 255))
+                rgb_image.paste(image, mask=image.split()[3])
+                image = rgb_image
+            elif image.mode != 'RGB':
+                image = image.convert('RGB')
+            
+            # Try YapaLab YOLO-face first (most accurate for faces)
+            if self.yolo_face_model:
+                try:
+                    faces = self._detect_face_yolo_face(image)
+                    if faces:
+                        return faces
+                    print('YapaLab YOLO-face found no faces, trying OpenCV...')
+                except Exception as e:
+                    print(f'YapaLab YOLO-face failed: {e}, trying OpenCV...')
+            
+            # Fallback to OpenCV Haar Cascade
+            faces = self._detect_face_opencv(image)
+            if faces:
+                return faces
+            print('OpenCV found no faces, falling back to YOLO person detection...')
+            
+            # Final fallback to YOLO person detection
+            return self._detect_face_yolo_fallback(image)
+            
+        except Exception as e:
+            print(f'All face detection methods failed: {e}')
+            raise Exception(f"Face detection failed: {str(e)}")
+    
+    def _detect_face_yolo_face(self, image):
+        """Detect face using YapaLab YOLO-face model (most accurate)"""
+        try:
+            # Ensure image is RGB (YOLO expects 3 channels, not RGBA)
+            if image.mode == 'RGBA':
+                rgb_image = Image.new('RGB', image.size, (255, 255, 255))
+                rgb_image.paste(image, mask=image.split()[3])
+                image = rgb_image
+            elif image.mode != 'RGB':
+                image = image.convert('RGB')
+            
             # Convert PIL image to numpy array
             img_array = np.array(image)
             
-            # Run inference
-            results = self.face_model(img_array)
+            # Run YapaLab YOLO-face inference
+            results = self.yolo_face_model(img_array)
             
             faces = []
             for result in results:
@@ -43,18 +95,129 @@ class PassportPhotoProcessor:
                         x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
                         confidence = box.conf[0].cpu().numpy()
                         
-                        # Filter by confidence
+                        # YOLO-face should have high confidence for actual faces
+                        min_confidence = settings.PASSPORT_PHOTO_SETTINGS.get('FACE_DETECTION_CONFIDENCE', {}).get('YOLO_FACE', 0.3)
+                        if confidence > min_confidence:
+                            face_width = x2 - x1
+                            face_height = y2 - y1
+                            aspect_ratio = face_width / face_height
+                            
+                            # Validate face dimensions
+                            if 0.5 <= aspect_ratio <= 2.0:  # Reasonable face aspect ratio
+                                img_area = image.width * image.height
+                                face_area = face_width * face_height
+                                area_ratio = face_area / img_area
+                                
+                                if 0.005 <= area_ratio <= 0.8:  # Face should be reasonable size
+                                    faces.append({
+                                        'bbox': (int(x1), int(y1), int(x2), int(y2)),
+                                        'confidence': float(confidence),
+                                        'method': 'yolo_face'
+                                    })
+            
+            # Sort by confidence and return the best face
+            if faces:
+                faces.sort(key=lambda x: x['confidence'], reverse=True)
+                return faces[:1]  # Return only the most confident face
+            
+            return []
+            
+        except Exception as e:
+            raise Exception(f"YOLO-face detection failed: {str(e)}")
+    
+    def _detect_face_opencv(self, image):
+        """Detect face using OpenCV Haar Cascade"""
+        try:
+            # Convert PIL image to OpenCV format
+            cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+            gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
+            
+            # Use OpenCV Haar Cascade for face detection
+            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+            
+            # Detect faces with different parameters for better accuracy
+            opencv_faces = face_cascade.detectMultiScale(
+                gray,
+                scaleFactor=1.1,
+                minNeighbors=5,
+                minSize=(50, 50),  # Minimum face size
+                flags=cv2.CASCADE_SCALE_IMAGE
+            )
+            
+            faces = []
+            for (x, y, w, h) in opencv_faces:
+                # Convert to our format
+                x1, y1, x2, y2 = x, y, x + w, y + h
+                
+                # Calculate confidence equivalent (OpenCV doesn't provide confidence)
+                face_area = w * h
+                img_area = image.width * image.height
+                area_ratio = face_area / img_area
+                
+                # Assign confidence based on face size and aspect ratio
+                aspect_ratio = w / h
+                confidence = min(0.95, 0.5 + area_ratio * 2)  # Higher confidence for larger faces
+                
+                # Validate face dimensions
+                if 0.7 <= aspect_ratio <= 1.4:  # Face should be roughly square to slightly tall
+                    if 0.01 <= area_ratio <= 0.5:  # Face should be reasonable size
+                        faces.append({
+                            'bbox': (int(x1), int(y1), int(x2), int(y2)),
+                            'confidence': float(confidence),
+                            'method': 'opencv_haar'
+                        })
+            
+            # Filter out false positives - select the uppermost face (head should be at top)
+            if len(faces) > 1:
+                print(f'OpenCV found {len(faces)} faces, selecting the uppermost one...')
+                faces.sort(key=lambda x: (x['bbox'][1], -x['confidence']))
+                faces = faces[:1]  # Keep only the top face
+            
+            faces.sort(key=lambda x: x['confidence'], reverse=True)
+            return faces
+            
+        except Exception as e:
+            raise Exception(f"OpenCV face detection failed: {str(e)}")
+    
+    def _detect_face_yolo_fallback(self, image):
+        """Fallback YOLO person detection with head estimation"""
+        try:
+            # Convert PIL image to numpy array
+            img_array = np.array(image)
+            
+            # Run YOLO inference (using the fallback model)
+            results = self.yolo_face_model(img_array)
+            
+            faces = []
+            for result in results:
+                boxes = result.boxes
+                if boxes is not None:
+                    for box in boxes:
+                        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                        confidence = box.conf[0].cpu().numpy()
+                        
                         if confidence > 0.5:
-                            faces.append({
-                                'bbox': (int(x1), int(y1), int(x2), int(y2)),
-                                'confidence': float(confidence)
-                            })
+                            face_width = x2 - x1
+                            face_height = y2 - y1
+                            aspect_ratio = face_width / face_height
+                            
+                            if 0.3 <= aspect_ratio <= 2.0:
+                                img_area = image.width * image.height
+                                face_area = face_width * face_height
+                                area_ratio = face_area / img_area
+                                
+                                if area_ratio <= 0.8:
+                                    faces.append({
+                                        'bbox': (int(x1), int(y1), int(x2), int(y2)),
+                                        'confidence': float(confidence),
+                                        'method': 'yolo_person'
+                                    })
             
             return faces
         except Exception as e:
             raise Exception(f"Face detection failed: {str(e)}")
     
-    def calculate_optimal_scale_and_position(self, face_bbox, image_size, target_size, face_height_ratio, country_code=None):
+    def calculate_optimal_scale_and_position(self, face_bbox, image_size, target_size, face_height_ratio, country_code=None, detection_method='opencv_haar'):
         """Calculate optimal scaling and positioning for perfect head centering"""
         x1, y1, x2, y2 = face_bbox
         img_width, img_height = image_size
@@ -68,7 +231,7 @@ class PassportPhotoProcessor:
         
         # Special handling for Finland's strict requirements
         if country_code == 'FI':
-            return self._calculate_finnish_positioning(face_bbox, image_size, target_size)
+            return self._calculate_finnish_positioning(face_bbox, image_size, target_size, detection_method)
         
         # Standard positioning for other countries
         target_face_height = target_height * face_height_ratio
@@ -112,7 +275,7 @@ class PassportPhotoProcessor:
             'face_center': (face_center_x, face_center_y)
         }
     
-    def _calculate_finnish_positioning(self, face_bbox, image_size, target_size):
+    def _calculate_finnish_positioning(self, face_bbox, image_size, target_size, detection_method='opencv_haar'):
         """Calculate positioning specifically for Finnish passport requirements"""
         x1, y1, x2, y2 = face_bbox
         img_width, img_height = image_size
@@ -123,20 +286,68 @@ class PassportPhotoProcessor:
         # Top margin: 56-84 px (using optimal 70px)
         # Bottom margin: 96-124 px (using optimal 110px)
         
-        face_width = x2 - x1
-        face_height = y2 - y1
-        face_center_x = x1 + face_width / 2
-        face_center_y = y1 + face_height / 2
+        if detection_method == 'yolo_face':
+            # YapaLab YOLO-face provides very precise face detection
+            # Need to expand significantly to include full head for passport photos
+            detected_width = x2 - x1
+            detected_height = y2 - y1
+            
+            # Expand face detection to include full head (hair, forehead, chin, neck)
+            # YOLO-face detects just facial features, so need more expansion
+            head_expansion = settings.PASSPORT_PHOTO_SETTINGS.get('HEAD_EXPANSION', {}).get('YOLO_FACE', 1.4)
+            face_width = detected_width * head_expansion
+            face_height = detected_height * head_expansion
+            
+            # Center the expanded area on the detected face
+            face_center_x = x1 + detected_width / 2
+            face_center_y = y1 + detected_height / 2
+            
+        elif detection_method == 'opencv_haar':
+            # OpenCV Haar Cascade provides accurate face detection
+            # Use the detected face area directly with some expansion for full head
+            detected_width = x2 - x1
+            detected_height = y2 - y1
+            
+            # Expand face detection to include full head (hair, forehead, chin)
+            # Haar cascade typically detects just the core face features
+            head_expansion = settings.PASSPORT_PHOTO_SETTINGS.get('HEAD_EXPANSION', {}).get('OPENCV_HAAR', 1.3)
+            face_width = detected_width * head_expansion
+            face_height = detected_height * head_expansion
+            
+            # Center the expanded area on the detected face
+            face_center_x = x1 + detected_width / 2
+            face_center_y = y1 + detected_height / 2
+            
+        else:
+            # YOLO person detection - estimate head area from full person
+            person_width = x2 - x1
+            person_height = y2 - y1
+            
+            # Estimate head area (typically top 25-30% of person detection)
+            head_height_ratio = settings.PASSPORT_PHOTO_SETTINGS.get('HEAD_EXPANSION', {}).get('YOLO_PERSON', 0.28)
+            estimated_head_height = person_height * head_height_ratio
+            
+            head_width_ratio = 0.75
+            estimated_head_width = person_width * head_width_ratio
+            
+            # Position head in upper portion of person detection
+            head_top = y1 + (person_height * 0.05)
+            head_left = x1 + (person_width - estimated_head_width) / 2
+            
+            face_width = estimated_head_width
+            face_height = estimated_head_height
+            face_center_x = head_left + face_width / 2
+            face_center_y = head_top + face_height / 2
         
-        # Target face height for Finland - use 485px (closer to max for better visibility)
-        # The detected face is typically smaller than the full head, so we need to scale more
-        target_face_height = 485  # Higher in the 445-500px range
+        # Target face height for Finland - use near maximum for passport photo compliance
+        # For passport photos, head should be very prominent
+        target_face_height = 490  # Near maximum 500px for better head visibility
         
-        # Finnish positioning: center horizontally, optimal vertical placement
+        # Finnish positioning: center horizontally, position for head-focused framing
         target_head_center_x = target_width / 2  # 250px
-        # Crown should be at ~70px from top, chin at ~555px from top
-        # So face center should be at ~312.5px from top
-        target_head_center_y = 70 + (target_face_height / 2)  # ~312.5px
+        # Position head higher in frame to minimize body visibility
+        # Crown at ~60px from top, chin at ~550px from top
+        target_head_center_y = 60 + (target_face_height / 2)  # ~305px - higher positioning
         
         # Calculate scale based on face height - be more aggressive with scaling
         # YOLO face detection often underestimates the full head size
@@ -149,8 +360,9 @@ class PassportPhotoProcessor:
             (target_height * 1.0) / (face_height * 1.2)  # Less restrictive height limit
         )
         
-        # Use the base scale more aggressively for Finnish compliance
-        final_scale = min(base_scale * 1.15, max_scale)  # 15% boost for better head size
+        # Use appropriate scale for estimated head area
+        # Since we now have better head estimation, less aggressive scaling needed
+        final_scale = min(base_scale * 1.2, max_scale)  # 20% boost for proper head size
         
         return {
             'scale': final_scale,
@@ -164,12 +376,12 @@ class PassportPhotoProcessor:
             # Load image
             image = Image.open(io.BytesIO(image_bytes))
             
-            # Remove background
+            # Remove background (this may also rotate/correct the image)
             no_bg_bytes = self.remove_background(image_bytes)
             no_bg_image = Image.open(io.BytesIO(no_bg_bytes))
             
-            # Detect face
-            faces = self.detect_face(image)
+            # Detect face on the background-removed image (properly oriented)
+            faces = self.detect_face(no_bg_image)
             
             if not faces:
                 raise Exception("No face detected in the image")
@@ -180,6 +392,7 @@ class PassportPhotoProcessor:
             # Get the most confident face
             face = max(faces, key=lambda x: x['confidence'])
             face_bbox = face['bbox']
+            detection_method = face.get('method', 'opencv_haar')
             
             # Calculate target dimensions
             target_width = country_specs['photo_width']
@@ -192,7 +405,7 @@ class PassportPhotoProcessor:
             target_size = (target_width, target_height)
             
             optimization = self.calculate_optimal_scale_and_position(
-                face_bbox, image_size, target_size, face_height_ratio, country_code
+                face_bbox, image_size, target_size, face_height_ratio, country_code, detection_method
             )
             
             scale = optimization['scale']

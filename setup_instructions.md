@@ -1,81 +1,78 @@
-# AI Tools Platform - Setup Instructions
+# AI Passport Photo Processing System - Setup Instructions
 
-## Prerequisites
+A comprehensive AI-powered passport photo processing system with support for multiple countries, featuring advanced face detection using YapaLab YOLO-face model and Finnish passport compliance.
 
-- Python 3.11+
-- Node.js 16+ and npm
-- MySQL 8.0
+## 🚀 Quick Start
+
+### Prerequisites
+- Python 3.10+
+- Node.js 18+
 - Git
 
-## Backend Setup (Django)
+### 1. Backend Setup (Django + AI Models)
 
-1. **Navigate to backend directory:**
-   ```bash
-   cd backend
-   ```
+```bash
+# Navigate to backend directory
+cd backend
 
-2. **Create virtual environment:**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+# Install Python dependencies
+pip install -r requirements.txt
 
-4. **Set up environment variables:**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your database credentials
-   ```
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your configuration (see Configuration section below)
 
-5. **Set up MySQL database:**
-   ```sql
-   CREATE DATABASE ai_tools_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   ```
+# Run database migrations
+python manage.py makemigrations
+python manage.py migrate
 
-6. **Run migrations:**
-   ```bash
-   python manage.py makemigrations
-   python manage.py migrate
-   ```
+# Load sample country data (includes Finland)
+python manage.py shell
+```
 
-7. **Create superuser (optional):**
-   ```bash
-   python manage.py createsuperuser
-   ```
+**In Django shell, run:**
+```python
+from passport_photo.models import Country
 
-8. **Load sample countries data:**
-   ```bash
-   python manage.py shell
-   ```
-   Then run:
-   ```python
-   from passport_photo.models import Country
-   
-   countries_data = [
-       {'name': 'United States', 'code': 'US', 'photo_width': 600, 'photo_height': 600, 'face_height_ratio': 0.7},
-       {'name': 'United Kingdom', 'code': 'UK', 'photo_width': 450, 'photo_height': 600, 'face_height_ratio': 0.7},
-       {'name': 'Canada', 'code': 'CA', 'photo_width': 420, 'photo_height': 540, 'face_height_ratio': 0.7},
-       {'name': 'Australia', 'code': 'AU', 'photo_width': 450, 'photo_height': 600, 'face_height_ratio': 0.7},
-       {'name': 'Germany', 'code': 'DE', 'photo_width': 450, 'photo_height': 600, 'face_height_ratio': 0.7},
-       {'name': 'France', 'code': 'FR', 'photo_width': 450, 'photo_height': 600, 'face_height_ratio': 0.7},
-   ]
-   
-   for country_data in countries_data:
-       Country.objects.get_or_create(**country_data)
-   
-   exit()
-   ```
+countries_data = [
+    {'name': 'United States', 'code': 'US', 'photo_width': 600, 'photo_height': 600, 'face_height_ratio': 0.7},
+    {'name': 'United Kingdom', 'code': 'UK', 'photo_width': 450, 'photo_height': 600, 'face_height_ratio': 0.7},
+    {'name': 'Finland', 'code': 'FI', 'photo_width': 500, 'photo_height': 653, 'face_height_ratio': 0.724},
+    {'name': 'Canada', 'code': 'CA', 'photo_width': 420, 'photo_height': 540, 'face_height_ratio': 0.7},
+    {'name': 'Australia', 'code': 'AU', 'photo_width': 450, 'photo_height': 600, 'face_height_ratio': 0.7},
+    {'name': 'Germany', 'code': 'DE', 'photo_width': 450, 'photo_height': 600, 'face_height_ratio': 0.7},
+]
 
-9. **Start development server:**
-   ```bash
-   python manage.py runserver
-   ```
+for country_data in countries_data:
+    Country.objects.get_or_create(**country_data)
 
-Backend will be available at: http://localhost:8000
+exit()
+```
+
+**Download YapaLab YOLO-face model:**
+```bash
+python -c "
+import requests
+import os
+print('Downloading YapaLab YOLO-face model...')
+model_url = 'https://github.com/YapaLab/yolo-face/releases/download/v0.0.0/yolov8n-face.pt'
+response = requests.get(model_url, timeout=60)
+os.makedirs('/tmp', exist_ok=True)
+with open('/tmp/yolov8n-face.pt', 'wb') as f:
+    f.write(response.content)
+print('✓ YapaLab YOLO-face model downloaded to /tmp/yolov8n-face.pt')
+print(f'✓ Model size: {len(response.content) / (1024*1024):.1f} MB')
+"
+
+# Start the Django development server
+python manage.py runserver
+```
+
+**Backend will be available at: http://localhost:8000**
 
 ## Frontend Setup (React + TypeScript + Tailwind CSS)
 
@@ -94,13 +91,173 @@ Backend will be available at: http://localhost:8000
    npm start
    ```
 
-Frontend will be available at: http://localhost:3000
+**Frontend will be available at: http://localhost:3000**
 
-## API Endpoints
+### 3. Access the Application
 
-- `GET /api/v1/countries/` - List all countries
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8000
+- **Admin Panel**: http://localhost:8000/admin
+
+## 🎯 System Features
+
+### Face Detection Methods (in priority order)
+1. **YapaLab YOLO-face** - State-of-the-art face detection (primary)
+2. **OpenCV Haar Cascade** - Reliable fallback method
+3. **YOLO Person Detection** - Final fallback with head estimation
+
+### Country Support
+- **Finland** - Complete compliance with official requirements (500×653px, max 250KB)
+- **USA** - Standard passport dimensions (600×600px)
+- **UK** - UK passport specifications (450×600px)
+- **Canada, Australia, Germany** - Standard international formats
+- Easily extensible for additional countries
+
+### AI Processing Pipeline
+1. **Background Removal** - Using rembg AI model
+2. **Face Detection** - Multi-method cascade for reliability
+3. **Head Positioning** - Intelligent scaling and centering
+4. **Image Enhancement** - Sharpness and contrast optimization
+5. **Format Compliance** - Country-specific dimensions and file size limits
+
+## ⚙️ Configuration
+
+### Environment Variables (.env)
+
+```bash
+# Django Settings
+DJANGO_SECRET_KEY=your-secret-key-here
+DEBUG=True
+
+# Database (optional - defaults to SQLite)
+# DATABASE_URL=mysql://user:password@localhost/dbname
+
+# File Upload Settings
+MAX_FILE_SIZE=10485760  # 10MB in bytes
+```
+
+### Advanced Configuration (ai_tools/settings.py)
+
+```python
+PASSPORT_PHOTO_SETTINGS = {
+    # Basic Settings
+    'TEMP_STORAGE_HOURS': 24,
+    'MAX_FILE_SIZE': 10485760,  # 10MB
+    'ALLOWED_FORMATS': ['JPEG', 'JPG', 'PNG', 'WEBP'],
+    'OUTPUT_QUALITY': 95,
+    'OUTPUT_DPI': 300,
+    
+    # Face Detection Configuration
+    'YOLO_FACE_MODEL_PATH': '/tmp/yolov8n-face.pt',  # YapaLab model location
+    
+    # Head Expansion Ratios (adjustable for different results)
+    'HEAD_EXPANSION': {
+        'YOLO_FACE': 1.4,    # For YapaLab YOLO-face (1.2-1.5 recommended)
+        'OPENCV_HAAR': 1.3,  # For OpenCV Haar Cascade
+        'YOLO_PERSON': 0.28, # Head ratio for person detection
+    },
+    
+    # Detection Confidence Thresholds
+    'FACE_DETECTION_CONFIDENCE': {
+        'YOLO_FACE': 0.3,    # Lower = more permissive
+        'OPENCV_HAAR': 0.5,
+        'YOLO_PERSON': 0.5,
+    },
+}
+```
+
+## 🔧 Fine-tuning Head Expansion
+
+The `HEAD_EXPANSION.YOLO_FACE` setting controls how much the detected face area is expanded to include the full head:
+
+- **1.2**: Tighter crop, focus on facial features
+- **1.3**: Balanced, good for most use cases  
+- **1.4**: More conservative, shows more forehead/hair (default)
+- **1.5**: Maximum expansion, includes neck/shoulders
+
+### Testing Different Ratios
+
+```python
+# In Django shell (python manage.py shell)
+from django.conf import settings
+
+# Temporarily override for testing
+settings.PASSPORT_PHOTO_SETTINGS['HEAD_EXPANSION']['YOLO_FACE'] = 1.3
+
+# Process your test images and compare results
+```
+
+## 🛠️ Model Management
+
+### YapaLab YOLO-face Model
+
+**Default Location**: `/tmp/yolov8n-face.pt`  
+**Size**: ~6MB  
+**Source**: https://github.com/YapaLab/yolo-face
+
+**Alternative Models** (more accurate but larger):
+- `yolov8s-face.pt` (~22MB)
+- `yolov8m-face.pt` (~52MB)
+- `yolov8l-face.pt` (~87MB)
+
+### Updating Model Location
+
+```python
+# In settings.py
+PASSPORT_PHOTO_SETTINGS = {
+    'YOLO_FACE_MODEL_PATH': '/path/to/your/model.pt',
+    # ... other settings
+}
+```
+
+## 🇫🇮 Finnish Passport Photo Requirements
+
+This system implements complete compliance with Finnish Police Office requirements:
+
+- **Exact Dimensions**: 500×653 pixels (no deviation allowed)
+- **Head Size**: 445-500 pixels from crown to chin
+- **Top Margin**: 56-84 pixels above crown
+- **Bottom Margin**: 96-124 pixels below chin
+- **Max File Size**: 250 kilobytes
+- **Format**: JPEG only
+- **Background**: Plain white or light colored
+
+### Finnish Processing Features
+
+1. **Automatic File Size Optimization** - Reduces JPEG quality to meet 250KB limit
+2. **Precise Head Positioning** - Centers head at optimal position for Finnish requirements
+3. **Dimension Enforcement** - Outputs exactly 500×653 pixels
+4. **Quality Balance** - Maintains visual quality while meeting size constraints
+
+## 📊 API Endpoints
+
+### Countries
+- `GET /api/v1/countries/` - List all supported countries
+
+### Photo Processing
 - `POST /api/v1/upload/` - Upload photo for processing
-- `GET /api/v1/job/{job_id}/` - Get processing job status
+- `GET /api/v1/job/{job_id}/` - Check processing status
+
+### Example API Usage
+
+```javascript
+// Upload photo
+const formData = new FormData();
+formData.append('photo', file);
+formData.append('country_id', countryId);
+
+const response = await fetch('/api/v1/upload/', {
+    method: 'POST',
+    body: formData
+});
+
+const result = await response.json();
+console.log('Job ID:', result.job_id);
+
+// Check status
+const statusResponse = await fetch(`/api/v1/job/${result.job_id}/`);
+const status = await statusResponse.json();
+```
 
 ## Features Included
 
