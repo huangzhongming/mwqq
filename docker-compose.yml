@@ -1,0 +1,127 @@
+version: '3.8'
+
+services:
+  # Frontend service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Backend service  
+  backend:
+    build:
+      context: ./backend/passport_photo
+      dockerfile: Dockerfile
+    environment:
+      - DEBUG=False
+      - ALLOWED_HOSTS=localhost,127.0.0.1,frontend
+      - DATABASE_URL=postgresql://postgres:password@db:5432/passport_photo
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - SECRET_KEY=your-secret-key-change-in-production
+    depends_on:
+      - db
+      - redis
+    networks:
+      - app-network
+    restart: unless-stopped
+    volumes:
+      - media_files:/app/media
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Celery worker for background tasks
+  celery-worker:
+    build:
+      context: ./backend/passport_photo
+      dockerfile: Dockerfile
+    command: celery -A passport_photo worker --loglevel=info
+    environment:
+      - DEBUG=False
+      - DATABASE_URL=postgresql://postgres:password@db:5432/passport_photo
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - SECRET_KEY=your-secret-key-change-in-production
+    depends_on:
+      - db
+      - redis
+    networks:
+      - app-network
+    restart: unless-stopped
+    volumes:
+      - media_files:/app/media
+
+  # PostgreSQL database
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=passport_photo
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching and Celery message broker
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx reverse proxy (optional, for production with SSL)
+  nginx-proxy:
+    image: nginx:alpine
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/etc/ssl/certs:ro
+    depends_on:
+      - frontend
+    networks:
+      - app-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_files:
+
+networks:
+  app-network:
+    driver: bridge
