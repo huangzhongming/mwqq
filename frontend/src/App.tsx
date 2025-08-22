@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { apiService } from './services/api';
-import { Country, PhotoProcessingJob } from './types';
+import { Country, PhotoProcessingJob, PrepareResponse, GenerateResponse } from './types';
 import FileUpload from './components/FileUpload';
 import CountrySelector from './components/CountrySelector';
 import ProcessingStatus from './components/ProcessingStatus';
 import LanguageSwitch from './components/LanguageSwitch';
+import PhotoEditor from './components/PhotoEditor';
 
 const App: React.FC = () => {
   const { t } = useTranslation();
@@ -16,6 +17,9 @@ const App: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [, setIsPolling] = useState(false);
+  const [processingMode, setProcessingMode] = useState<'auto' | 'semi-auto'>('semi-auto');
+  const [prepareData, setPrepareData] = useState<PrepareResponse | null>(null);
+  const [isPreparingPhoto, setIsPreparingPhoto] = useState(false);
 
   const loadCountries = useCallback(async () => {
     try {
@@ -73,20 +77,36 @@ const App: React.FC = () => {
       return;
     }
 
-    setIsUploading(true);
-    setError(null);
+    if (processingMode === 'auto') {
+      setIsUploading(true);
+      setError(null);
 
-    try {
-      const response = await apiService.uploadPhoto(selectedFile, selectedCountry.id);
-      
-      const job = await apiService.getJobStatus(response.job_id);
-      setCurrentJob(job);
-      
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      setError(error.response?.data?.error || t('errors.uploadFailed'));
-    } finally {
-      setIsUploading(false);
+      try {
+        const response = await apiService.uploadPhoto(selectedFile, selectedCountry.id);
+        
+        const job = await apiService.getJobStatus(response.job_id);
+        setCurrentJob(job);
+        
+      } catch (error: any) {
+        console.error('Upload error:', error);
+        setError(error.response?.data?.error || t('errors.uploadFailed'));
+      } finally {
+        setIsUploading(false);
+      }
+    } else {
+      // Semi-auto mode
+      setIsPreparingPhoto(true);
+      setError(null);
+
+      try {
+        const prepareResult = await apiService.preparePhoto(selectedFile, selectedCountry.id);
+        setPrepareData(prepareResult);
+      } catch (error: any) {
+        console.error('Prepare error:', error);
+        setError(error.response?.data?.error || t('errors.prepareFailed', 'Photo preparation failed'));
+      } finally {
+        setIsPreparingPhoto(false);
+      }
     }
   };
 
@@ -95,9 +115,36 @@ const App: React.FC = () => {
     setSelectedFile(null);
     setSelectedCountry(null);
     setError(null);
+    setPrepareData(null);
   };
 
-  const canUpload = selectedFile && selectedCountry && !isUploading && !currentJob;
+  const handlePhotoGenerated = async (result: GenerateResponse) => {
+    try {
+      const job = await apiService.getJobStatus(result.job_id);
+      setCurrentJob(job);
+      setPrepareData(null);
+    } catch (error: any) {
+      console.error('Error fetching generated job:', error);
+      setError('Failed to load generated photo');
+    }
+  };
+
+  const handleBackFromEditor = () => {
+    setPrepareData(null);
+  };
+
+  const canUpload = selectedFile && selectedCountry && !isUploading && !currentJob && !isPreparingPhoto;
+
+  // Show photo editor if in semi-auto mode and have prepare data
+  if (prepareData) {
+    return (
+      <PhotoEditor
+        prepareData={prepareData}
+        onPhotoGenerated={handlePhotoGenerated}
+        onBack={handleBackFromEditor}
+      />
+    );
+  }
 
   if (currentJob) {
     return (
@@ -151,6 +198,48 @@ const App: React.FC = () => {
             </div>
           )}
 
+          <div className="border-b border-gray-200 pb-4">
+            <h3 className="text-lg font-medium text-gray-900 mb-3">
+              {t('mode.title', 'Processing Mode')}
+            </h3>
+            <div className="flex space-x-4">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="processingMode"
+                  value="semi-auto"
+                  checked={processingMode === 'semi-auto'}
+                  onChange={(e) => setProcessingMode(e.target.value as 'semi-auto')}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  disabled={isUploading || isPreparingPhoto}
+                />
+                <span className="ml-2 text-sm text-gray-900">
+                  {t('mode.semiAuto', 'Semi-Auto')} <span className="text-blue-600 font-medium">({t('mode.recommended', 'Recommended')})</span>
+                </span>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="processingMode"
+                  value="auto"
+                  checked={processingMode === 'auto'}
+                  onChange={(e) => setProcessingMode(e.target.value as 'auto')}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  disabled={isUploading || isPreparingPhoto}
+                />
+                <span className="ml-2 text-sm text-gray-900">
+                  {t('mode.auto', 'Automatic')}
+                </span>
+              </label>
+            </div>
+            <p className="mt-2 text-sm text-gray-600">
+              {processingMode === 'semi-auto' 
+                ? t('mode.semiAutoDesc', 'Review and adjust the photo area before generating - better control and results')
+                : t('mode.autoDesc', 'Fully automatic processing - quick but less control over final result')
+              }
+            </p>
+          </div>
+
           <FileUpload
             onFileSelect={handleFileSelect}
             selectedFile={selectedFile}
@@ -169,7 +258,11 @@ const App: React.FC = () => {
             disabled={!canUpload}
             className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
           >
-            {isUploading ? t('button.uploading') : t('button.generatePhoto')}
+            {(isUploading || isPreparingPhoto) ? (
+              processingMode === 'auto' ? t('button.uploading', 'Uploading...') : t('button.preparing', 'Preparing...')
+            ) : (
+              processingMode === 'auto' ? t('button.generatePhoto', 'Generate Photo') : t('button.next', 'Next →')
+            )}
           </button>
 
           <div className="text-center text-sm text-gray-500">
