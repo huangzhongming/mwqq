@@ -32,31 +32,53 @@ class PassportPhotoProcessor:
         self._bg_session_initialized = False
     
     def _initialize_bg_session(self):
-        """Initialize background removal session on first use"""
+        """Initialize background removal session on first use with GPU acceleration"""
         if not self._bg_session_initialized:
             self._bg_session_initialized = True
-            if self._bg_model != 'u2net':  # u2net is the default, no session needed
+            
+            # Setup GPU providers for acceleration
+            import torch
+            providers = ['CPUExecutionProvider']
+            if torch.cuda.is_available():
+                providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+                print(f"🎮 GPU detected: {torch.cuda.get_device_name(0)}")
+            
+            try:
+                print(f"🔄 Initializing {self._bg_model} background removal model with providers: {providers}")
+                self.bg_removal_session = new_session(self._bg_model, providers=providers)
+                print(f"✓ Loaded {self._bg_model} background removal model with GPU acceleration")
+            except Exception as e:
+                print(f"⚠️ Failed to load {self._bg_model} model with GPU, falling back to CPU: {e}")
                 try:
-                    print(f"🔄 Initializing {self._bg_model} background removal model...")
-                    self.bg_removal_session = new_session(self._bg_model)
-                    print(f"✓ Loaded {self._bg_model} background removal model")
-                except Exception as e:
-                    print(f"⚠️ Failed to load {self._bg_model} model, using default u2net: {e}")
+                    self.bg_removal_session = new_session(self._bg_model, providers=['CPUExecutionProvider'])
+                    print(f"✓ Loaded {self._bg_model} background removal model (CPU fallback)")
+                except Exception as e2:
+                    print(f"⚠️ Failed to load {self._bg_model} model, using default u2net: {e2}")
                     self.bg_removal_session = None
     
     def remove_background(self, image_bytes):
-        """Remove background from image using configured rembg model"""
+        """Remove background from image using configured rembg model with GPU acceleration"""
         try:
             # Initialize session on first use (lazy loading)
             self._initialize_bg_session()
             
             # Use configured background removal model
             if self.bg_removal_session:
-                # Use specific model session (e.g., birefnet-portrait)
+                # Use specific model session with GPU acceleration
                 output = remove(image_bytes, session=self.bg_removal_session)
             else:
-                # Use default u2net model
-                output = remove(image_bytes)
+                # Use default u2net model with GPU if available
+                import torch
+                if torch.cuda.is_available():
+                    providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+                    try:
+                        u2net_session = new_session('u2net', providers=providers)
+                        output = remove(image_bytes, session=u2net_session)
+                    except:
+                        # Fallback to default if GPU session fails
+                        output = remove(image_bytes)
+                else:
+                    output = remove(image_bytes)
             return output
         except Exception as e:
             raise Exception(f"Background removal failed: {str(e)}")
