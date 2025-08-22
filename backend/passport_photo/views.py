@@ -130,41 +130,55 @@ def prepare_photo(request):
         
         bg_removed_base64 = base64.b64encode(bg_removed_buffer.getvalue()).decode('utf-8')
         
-        # Calculate default rectangle position and size based on country requirements
+        # Use the same logic as automatic mode for default rectangle
         target_width = country.photo_width
         target_height = country.photo_height
         face_height_ratio = country.face_height_ratio
-        
-        # Calculate default rectangle size (same aspect ratio as target)
-        aspect_ratio = target_width / target_height
         image_width = no_bg_image.width
         image_height = no_bg_image.height
         
-        # Default rectangle size - make it reasonably sized
-        default_rect_height = min(image_height * 0.8, image_width * 0.8 / aspect_ratio)
-        default_rect_width = default_rect_height * aspect_ratio
+        # Get detection method for proper positioning
+        detection_method = face['method']
         
-        # Position rectangle based on detected face
-        x1, y1, x2, y2 = face_bbox
-        face_center_x = (x1 + x2) / 2
-        face_center_y = (y1 + y2) / 2
+        # Use the same calculation as automatic mode
+        positioning_data = processor.calculate_optimal_scale_and_position(
+            face_bbox, 
+            (image_width, image_height), 
+            (target_width, target_height), 
+            face_height_ratio,
+            country.code,
+            detection_method
+        )
         
-        # Position rectangle with face center at the appropriate position
-        # For passport photos, face should be in upper portion
-        rect_center_x = face_center_x
-        rect_center_y = face_center_y - (default_rect_height * 0.1)  # Slightly higher than face center
+        scale = positioning_data['scale']
+        target_head_center = positioning_data['target_head_center']
+        face_center = positioning_data['face_center']
+        
+        # Calculate the cropping area that would be used in automatic mode
+        scaled_img_width = image_width * scale
+        scaled_img_height = image_height * scale
+        
+        # Calculate offset to center the head optimally
+        offset_x = target_head_center[0] - (face_center[0] * scale)
+        offset_y = target_head_center[1] - (face_center[1] * scale)
+        
+        # Calculate the crop area from the scaled and positioned image
+        crop_left = max(0, -offset_x)
+        crop_top = max(0, -offset_y)
+        crop_right = min(scaled_img_width, crop_left + target_width)
+        crop_bottom = min(scaled_img_height, crop_top + target_height)
+        
+        # Convert back to original image coordinates
+        rect_left = crop_left / scale
+        rect_top = crop_top / scale
+        rect_right = crop_right / scale
+        rect_bottom = crop_bottom / scale
         
         # Ensure rectangle stays within image bounds
-        rect_left = max(0, rect_center_x - default_rect_width / 2)
-        rect_top = max(0, rect_center_y - default_rect_height / 2)
-        rect_right = min(image_width, rect_left + default_rect_width)
-        rect_bottom = min(image_height, rect_top + default_rect_height)
-        
-        # Adjust if rectangle goes out of bounds
-        if rect_right - rect_left < default_rect_width:
-            rect_left = max(0, rect_right - default_rect_width)
-        if rect_bottom - rect_top < default_rect_height:
-            rect_top = max(0, rect_bottom - default_rect_height)
+        rect_left = max(0, min(image_width - target_width/scale, rect_left))
+        rect_top = max(0, min(image_height - target_height/scale, rect_top))
+        rect_right = min(image_width, rect_left + target_width/scale)
+        rect_bottom = min(image_height, rect_top + target_height/scale)
         
         return Response({
             'image_data': bg_removed_base64,
