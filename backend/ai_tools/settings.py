@@ -130,7 +130,7 @@ PASSPORT_PHOTO_SETTINGS = {
     'OUTPUT_DPI': 300,
     
     # Background Removal Configuration
-    'BACKGROUND_REMOVAL_MODEL': 'isnet-general-use',  # Options: 'u2net' (default), 'isnet-general-use', 'birefnet-portrait' (best quality, slow), 'u2netp' (fast), 'u2net-human-seg' (optimized for humans)
+    'BACKGROUND_REMOVAL_MODEL': 'birefnet-portrait',  # Options: 'u2net' (default), 'isnet-general-use', 'birefnet-portrait' (best quality), 'u2netp' (fast), 'u2net-human-seg' (optimized for humans)
     
     # Face Detection Configuration
     'YOLO_FACE_MODEL_PATH': '/tmp/yolov8n-face.pt',  # YapaLab YOLO-face model location
