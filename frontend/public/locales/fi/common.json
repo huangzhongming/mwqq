@@ -35,7 +35,12 @@
   },
   "button": {
     "generatePhoto": "Luo passikuva",
-    "uploading": "Ladataan..."
+    "uploading": "Ladataan...",
+    "preparing": "Valmistellaan...",
+    "next": "Seuraava →",
+    "back": "Takaisin",
+    "generating": "Generoidaan...",
+    "generatePassportPhoto": "Luo passikuva"
   },
   "features": {
     "backgroundRemoval": "✓ Taustan poisto tekoälyllä",
@@ -47,6 +52,26 @@
     "selectBoth": "Valitse sekä kuva että maa.",
     "uploadFailed": "Lataus epäonnistui. Yritä uudelleen.",
     "loadCountriesFailed": "Maiden lataus epäonnistui. Päivitä sivu.",
-    "pollingError": "Virhe työn tilan tarkistuksessa:"
+    "pollingError": "Virhe työn tilan tarkistuksessa:",
+    "prepareFailed": "Kuvan valmistelu epäonnistui"
+  },
+  "mode": {
+    "title": "Käsittelytila",
+    "semiAuto": "Puoli-automaattinen",
+    "recommended": "Suositeltu",
+    "auto": "Automaattinen",
+    "semiAutoDesc": "Tarkista ja säädä kuva-aluetta ennen generointia - parempi hallinta ja tulokset",
+    "autoDesc": "Täysin automaattinen käsittely - nopea mutta vähemmän hallintaa lopputuloksesta"
+  },
+  "editor": {
+    "title": "Säädä kuva-aluetta",
+    "subtitle": "Vedä ja muuta suorakulmion kokoa valitaksesi alueen passikuvaasi varten",
+    "instructions": "Tausta poistettu automaattisesti. Vedä siirtääksesi, muuta kokoa kulmista.",
+    "selectionInfo": "Valinnan tiedot",
+    "tips": "Vinkit",
+    "tip1": "Vedä suorakulmion sisältä siirtääksesi",
+    "tip2": "Vedä kulmista muuttaaksesi kokoa",
+    "tip3": "Kuvasuhde säilytetään",
+    "tip4": "Kasvojen pitäisi olla yläosassa"
   }
 }
