@@ -17,8 +17,8 @@ def test_face_detection_with_debug():
     print("🔍 Testing Face Detection with Debug Visualization")
     print("=" * 60)
     
-    # Test image path (absolute, resolved relative to this script)
-    test_image_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tmp", "test2.jpg"))
+    # Test image path (relative to this script's directory)
+    test_image_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "tmp", "test2.jpg"))
     
     if not os.path.exists(test_image_path):
         print(f"❌ Test image not found: {test_image_path}")

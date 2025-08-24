@@ -72,6 +72,7 @@
     "tip1": "Drag inside rectangle to move",
     "tip2": "Drag corners to resize",
     "tip3": "Aspect ratio is maintained",
-    "tip4": "Face should be in upper portion"
+    "tip4": "Face should be in upper portion",
+    "generateError": "An error occurred while generating the photo. Please try again."
   }
 }

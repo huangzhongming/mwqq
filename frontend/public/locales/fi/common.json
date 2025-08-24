@@ -72,6 +72,7 @@
     "tip1": "Vedä suorakulmion sisältä siirtääksesi",
     "tip2": "Vedä kulmista muuttaaksesi kokoa",
     "tip3": "Kuvasuhde säilytetään",
-    "tip4": "Kasvojen pitäisi olla yläosassa"
+    "tip4": "Kasvojen pitäisi olla yläosassa",
+    "generateError": "Kuvan generoinnissa tapahtui virhe. Yritä uudelleen."
   }
 }

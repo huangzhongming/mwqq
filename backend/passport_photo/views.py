@@ -321,11 +321,12 @@ def generate_photo(request):
                 quality -= 5
         else:
             # Standard output for other countries
+            # Note: DPI setting is metadata only, pixel dimensions determine actual resolution
             final_image.save(
                 output,
                 format='JPEG',
                 quality=95,
-                dpi=(300, 300)
+                dpi=(300, 300)  # Metadata only - actual resolution determined by pixel dimensions
             )
         
         output.seek(0)
