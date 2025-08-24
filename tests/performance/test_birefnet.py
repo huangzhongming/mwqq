@@ -24,8 +24,9 @@ def test_birefnet_performance():
         print(f"🎮 GPU Count: {torch.cuda.device_count()}")
         print(f"🎯 Current GPU: {torch.cuda.get_device_name(0)}")
     
-    # Test image (relative to project root)
-    test_image_path = "../tmp/test2.jpg"
+    # Test image (resolved to absolute path)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    test_image_path = os.path.abspath(os.path.join(script_dir, "..", "tmp", "test2.jpg"))
     
     if not os.path.exists(test_image_path):
         print(f"❌ Test image not found: {test_image_path}")

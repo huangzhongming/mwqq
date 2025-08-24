@@ -3,6 +3,7 @@
 import requests
 import json
 import time
+import pathlib
 
 def test_birefnet_e2e():
     base_url = "http://localhost:8000/api/v1"
@@ -10,8 +11,8 @@ def test_birefnet_e2e():
     print("🚀 Testing BiRefNet-Portrait End-to-End Workflow")
     print("=" * 60)
     
-    # Test image (relative to project root)
-    test_image_path = "../tmp/test2.jpg"
+    # Test image (resolved relative to this script's directory)
+    test_image_path = str((pathlib.Path(__file__).parent.parent / "tmp" / "test2.jpg").resolve())
     
     # Step 1: Test countries endpoint
     print("1️⃣ Testing countries endpoint...")

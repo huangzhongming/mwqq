@@ -3,6 +3,7 @@
 import requests
 import json
 import base64
+from pathlib import Path
 
 def test_semi_auto_workflow():
     base_url = "http://localhost:8000/api/v1"
@@ -31,7 +32,7 @@ def test_semi_auto_workflow():
     
     # Step 2: Test prepare endpoint
     print("\n2️⃣ Testing prepare endpoint...")
-    test_image_path = "tmp/test.png"
+    test_image_path = str((Path(__file__).parent.parent / "tmp" / "test.png").resolve())
     
     try:
         with open(test_image_path, 'rb') as f:

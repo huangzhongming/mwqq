@@ -18,8 +18,8 @@ def test_birefnet_subsequent_calls():
     print("🔍 Testing BiRefNet-Portrait: Subsequent Calls Performance")
     print("=" * 70)
     
-    # Test image (relative to project root)
-    test_image_path = "../tmp/test2.jpg"
+    # Test image (absolute, resolved relative to this script)
+    test_image_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../tmp/test2.jpg"))
     
     with open(test_image_path, 'rb') as f:
         image_bytes = f.read()
