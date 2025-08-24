@@ -5,4 +5,6 @@ urlpatterns = [
     path('countries/', views.CountryListView.as_view(), name='countries-list'),
     path('upload/', views.upload_photo, name='upload-photo'),
     path('job/<uuid:job_id>/', views.job_status, name='job-status'),
+    path('prepare/', views.prepare_photo, name='prepare-photo'),
+    path('generate/', views.generate_photo, name='generate-photo'),
 ]

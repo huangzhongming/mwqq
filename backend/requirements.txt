@@ -3,7 +3,14 @@ mysqlclient==2.2.4
 django-cors-headers==4.3.1
 Pillow==10.4.0
 opencv-python==4.10.0.84
-rembg==2.0.59
-ultralytics==8.3.0
 python-dotenv==1.0.1
 djangorestframework==3.15.2
+
+# GPU Acceleration Dependencies (install before rembg and ultralytics)
+onnxruntime-gpu==1.22.0
+torch==2.8.0
+torchvision==0.23.0
+
+# AI/ML packages (require onnxruntime/torch)
+rembg==2.0.59
+ultralytics==8.3.0

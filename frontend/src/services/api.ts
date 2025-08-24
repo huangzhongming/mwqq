@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Country, PhotoProcessingJob, UploadResponse } from '../types';
+import { Country, PhotoProcessingJob, UploadResponse, PrepareResponse, GenerateResponse, SelectionArea } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
 
@@ -17,7 +17,7 @@ export const apiService = {
     return response.data;
   },
 
-  // Upload photo
+  // Upload photo (original auto mode)
   uploadPhoto: async (photo: File, countryId: number): Promise<UploadResponse> => {
     const formData = new FormData();
     formData.append('photo', photo);
@@ -27,6 +27,30 @@ export const apiService = {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+    });
+    return response.data;
+  },
+
+  // Prepare photo for manual selection (semi-auto mode)
+  preparePhoto: async (photo: File, countryId: number): Promise<PrepareResponse> => {
+    const formData = new FormData();
+    formData.append('photo', photo);
+    formData.append('country_id', countryId.toString());
+
+    const response = await api.post('/prepare/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  // Generate final photo from selection
+  generatePhoto: async (imageData: string, selection: SelectionArea, countryId: number): Promise<GenerateResponse> => {
+    const response = await api.post('/generate/', {
+      image_data: imageData,
+      selection,
+      country_id: countryId,
     });
     return response.data;
   },

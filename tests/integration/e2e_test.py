@@ -22,7 +22,7 @@ class PassportPhotoE2ETest:
     def __init__(self):
         self.base_url = "http://localhost:8000"
         self.api_url = f"{self.base_url}/api/v1"
-        self.test_image = "/Users/zhongminghuang/github/mwqq/tmp/hzm_origin.jpg"  # Sony camera file
+        self.test_image = "../tmp/test.png"  # Test image file (relative to project root)
         self.results = []
         
     def log_result(self, test_name, success, message, details=None):
