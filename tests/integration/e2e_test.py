@@ -22,7 +22,7 @@ class PassportPhotoE2ETest:
     def __init__(self):
         self.base_url = "http://localhost:8000"
         self.api_url = f"{self.base_url}/api/v1"
-        self.test_image = "../tmp/test.png"  # Test image file (relative to project root)
+        self.test_image = os.path.abspath(os.path.join(os.path.dirname(__file__), "../tmp/test.png"))  # Test image file (absolute path)
         self.results = []
         
     def log_result(self, test_name, success, message, details=None):

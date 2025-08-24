@@ -222,21 +222,55 @@ def generate_photo(request):
         if not all([image_data, selection, country_id]):
             return Response({'error': 'Missing required fields: image_data, selection, country_id'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Get country
-        country = Country.objects.get(id=country_id)
-        
-        # Decode base64 image
+        # Validate and get country
         try:
+            country_id = int(country_id)
+            if country_id <= 0:
+                return Response({'error': 'Invalid country ID: must be positive'}, status=status.HTTP_400_BAD_REQUEST)
+            country = Country.objects.get(id=country_id)
+        except (ValueError, TypeError):
+            return Response({'error': 'Invalid country ID format'}, status=status.HTTP_400_BAD_REQUEST)
+        except Country.DoesNotExist:
+            return Response({'error': 'Country not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Validate and decode base64 image
+        try:
+            # Validate base64 string length (prevent DoS attacks)
+            if len(image_data) > 50 * 1024 * 1024:  # 50MB limit for base64 string
+                return Response({'error': 'Image data too large'}, status=status.HTTP_400_BAD_REQUEST)
+                
             image_bytes = base64.b64decode(image_data)
+            
+            # Validate decoded image size
+            if len(image_bytes) > 20 * 1024 * 1024:  # 20MB limit for decoded image
+                return Response({'error': 'Image file too large'}, status=status.HTTP_400_BAD_REQUEST)
+                
             image = Image.open(io.BytesIO(image_bytes))
+            
+            # Validate image dimensions
+            if image.width > 10000 or image.height > 10000:
+                return Response({'error': 'Image dimensions too large'}, status=status.HTTP_400_BAD_REQUEST)
+                
         except Exception as e:
             return Response({'error': 'Invalid image data'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Extract selection coordinates
-        sel_x = int(selection['x'])
-        sel_y = int(selection['y'])
-        sel_width = int(selection['width'])
-        sel_height = int(selection['height'])
+        # Validate and extract selection coordinates
+        try:
+            sel_x = int(selection.get('x', 0))
+            sel_y = int(selection.get('y', 0))
+            sel_width = int(selection.get('width', 0))
+            sel_height = int(selection.get('height', 0))
+            
+            # Validate selection bounds
+            if sel_x < 0 or sel_y < 0 or sel_width <= 0 or sel_height <= 0:
+                return Response({'error': 'Invalid selection coordinates: values must be positive'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            # Validate selection doesn't exceed image bounds
+            if sel_x + sel_width > image.width or sel_y + sel_height > image.height:
+                return Response({'error': 'Selection area exceeds image bounds'}, status=status.HTTP_400_BAD_REQUEST)
+                
+        except (ValueError, KeyError, TypeError) as e:
+            return Response({'error': 'Invalid selection coordinates format'}, status=status.HTTP_400_BAD_REQUEST)
         
         # Crop the selected area
         cropped_image = image.crop((sel_x, sel_y, sel_x + sel_width, sel_y + sel_height))
@@ -287,11 +321,12 @@ def generate_photo(request):
                 quality -= 5
         else:
             # Standard output for other countries
+            # Note: DPI setting is metadata only, pixel dimensions determine actual resolution
             final_image.save(
                 output,
                 format='JPEG',
                 quality=95,
-                dpi=(300, 300)
+                dpi=(300, 300)  # Metadata only - actual resolution determined by pixel dimensions
             )
         
         output.seek(0)

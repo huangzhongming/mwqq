@@ -35,7 +35,12 @@
   },
   "button": {
     "generatePhoto": "Generate Passport Photo",
-    "uploading": "Uploading..."
+    "uploading": "Uploading...",
+    "preparing": "Preparing...",
+    "next": "Next →",
+    "back": "Back",
+    "generating": "Generating...",
+    "generatePassportPhoto": "Generate Passport Photo"
   },
   "features": {
     "backgroundRemoval": "✓ Background removal with AI",
@@ -47,6 +52,27 @@
     "selectBoth": "Please select both a photo and a country.",
     "uploadFailed": "Upload failed. Please try again.",
     "loadCountriesFailed": "Failed to load countries. Please refresh the page.",
-    "pollingError": "Error polling job status:"
+    "pollingError": "Error polling job status:",
+    "prepareFailed": "Photo preparation failed"
+  },
+  "mode": {
+    "title": "Processing Mode",
+    "semiAuto": "Semi-Auto",
+    "recommended": "Recommended",
+    "auto": "Automatic",
+    "semiAutoDesc": "Review and adjust the photo area before generating - better control and results",
+    "autoDesc": "Fully automatic processing - quick but less control over final result"
+  },
+  "editor": {
+    "title": "Adjust Photo Area",
+    "subtitle": "Drag and resize the rectangle to select the area for your passport photo",
+    "instructions": "Background removed automatically. Drag to move, resize from corners.",
+    "selectionInfo": "Selection Info",
+    "tips": "Tips",
+    "tip1": "Drag inside rectangle to move",
+    "tip2": "Drag corners to resize",
+    "tip3": "Aspect ratio is maintained",
+    "tip4": "Face should be in upper portion",
+    "generateError": "An error occurred while generating the photo. Please try again."
   }
 }

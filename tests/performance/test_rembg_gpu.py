@@ -24,8 +24,8 @@ def test_rembg_performance():
         print(f"🎮 GPU Count: {torch.cuda.device_count()}")
         print(f"🎯 Current GPU: {torch.cuda.get_device_name(0)}")
     
-    # Test image (relative to project root)
-    test_image_path = "../tmp/test2.jpg"
+    # Test image (relative to this script's location)
+    test_image_path = os.path.join(os.path.dirname(__file__), '..', '..', 'tmp', 'test2.jpg')
     
     if not os.path.exists(test_image_path):
         print(f"❌ Test image not found: {test_image_path}")

@@ -133,7 +133,7 @@ PASSPORT_PHOTO_SETTINGS = {
     'BACKGROUND_REMOVAL_MODEL': 'birefnet-portrait',  # Options: 'u2net' (default), 'isnet-general-use', 'birefnet-portrait' (best quality), 'u2netp' (fast), 'u2net-human-seg' (optimized for humans)
     
     # Face Detection Configuration
-    'YOLO_FACE_MODEL_PATH': '/tmp/yolov8n-face.pt',  # YapaLab YOLO-face model location
+    'YOLO_FACE_MODEL_PATH': os.path.join(BASE_DIR, 'tmp', 'yolov8n-face.pt'),  # YapaLab YOLO-face model location
     'HEAD_EXPANSION': {
         'YOLO_FACE': 1.4,    # Expansion ratio for YapaLab YOLO-face detection (1.2-1.5 recommended)
         'OPENCV_HAAR': 1.3,  # Expansion ratio for OpenCV Haar Cascade detection

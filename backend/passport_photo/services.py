@@ -9,19 +9,26 @@ from django.conf import settings
 
 class PassportPhotoProcessor:
     def __init__(self):
+        # Auto select best GPU for models
+        self.selected_gpu = self._auto_select_gpu()
+        
         # Load YapaLab YOLO-face model for accurate face detection
         model_path = settings.PASSPORT_PHOTO_SETTINGS.get('YOLO_FACE_MODEL_PATH', '/tmp/yolov8n-face.pt')
         
         try:
             # Try YapaLab face model first (most accurate)
             self.yolo_face_model = YOLO(model_path)
-            print(f"✓ Loaded YapaLab YOLOv8n-face model from {model_path}")
+            if self.selected_gpu is not None:
+                self.yolo_face_model.to(f'cuda:{self.selected_gpu}')
+            print(f"✓ Loaded YapaLab YOLOv8n-face model from {model_path} on GPU {self.selected_gpu}")
         except Exception as e:
             print(f"Failed to load YapaLab face model from {model_path}: {e}")
             try:
                 # Fallback to standard YOLO
                 self.yolo_face_model = YOLO('yolov8n.pt')
-                print("✓ Loaded standard YOLOv8n model as fallback")
+                if self.selected_gpu is not None:
+                    self.yolo_face_model.to(f'cuda:{self.selected_gpu}')
+                print(f"✓ Loaded standard YOLOv8n model as fallback on GPU {self.selected_gpu}")
             except Exception as e2:
                 print(f"Failed to load any YOLO model: {e2}")
                 self.yolo_face_model = None
@@ -30,18 +37,62 @@ class PassportPhotoProcessor:
         self.bg_removal_session = None
         self._bg_model = settings.PASSPORT_PHOTO_SETTINGS.get('BACKGROUND_REMOVAL_MODEL', 'u2net')
         self._bg_session_initialized = False
+
+    def _auto_select_gpu(self):
+        """Auto select best GPU: prefer GPU 1 if available with >2GB free, fallback to GPU 0"""
+        import torch
+        if not torch.cuda.is_available():
+            print("🚫 No CUDA GPUs available, using CPU")
+            return None
+        
+        try:
+            gpu_info = []
+            for i in range(torch.cuda.device_count()):
+                gpu_name = torch.cuda.get_device_name(i)
+                torch.cuda.set_device(i)
+                total_mem = torch.cuda.get_device_properties(i).total_memory / (1024**3)
+                free_mem, _ = torch.cuda.mem_get_info()
+                free_mem_gb = free_mem / (1024**3)
+                gpu_info.append({
+                    'id': i, 
+                    'name': gpu_name, 
+                    'free_mem_gb': free_mem_gb,
+                    'total_mem_gb': total_mem
+                })
+            
+            # Select GPU 1 if available and has >2GB free memory, otherwise use GPU 0
+            if len(gpu_info) > 1 and gpu_info[1]['free_mem_gb'] > 2.0:
+                selected_gpu = 1
+                print(f"🎮 Auto-selected GPU 1: {gpu_info[1]['name']} ({gpu_info[1]['free_mem_gb']:.1f}GB free)")
+            else:
+                selected_gpu = 0
+                if len(gpu_info) > 0:
+                    print(f"🎮 Using GPU 0: {gpu_info[0]['name']} ({gpu_info[0]['free_mem_gb']:.1f}GB free)")
+            
+            return selected_gpu
+            
+        except Exception as e:
+            print(f"⚠️ GPU selection error, using GPU 0: {e}")
+            return 0
     
     def _initialize_bg_session(self):
         """Initialize background removal session on first use with GPU acceleration"""
         if not self._bg_session_initialized:
             self._bg_session_initialized = True
             
-            # Setup GPU providers for acceleration
+            # Setup GPU providers for acceleration using pre-selected GPU
             import torch
             providers = ['CPUExecutionProvider']
-            if torch.cuda.is_available():
-                providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
-                print(f"🎮 GPU detected: {torch.cuda.get_device_name(0)}")
+            if torch.cuda.is_available() and self.selected_gpu is not None:
+                # Use the GPU selected during initialization
+                provider_options = {
+                    'device_id': self.selected_gpu,
+                    'arena_extend_strategy': 'kSameAsRequested',
+                    'gpu_mem_limit': 20 * 1024 * 1024 * 1024,  # 20GB limit
+                    'cudnn_conv_algo_search': 'EXHAUSTIVE'
+                }
+                providers = [('CUDAExecutionProvider', provider_options), 'CPUExecutionProvider']
+                print(f"🔄 Using GPU {self.selected_gpu} for BiRefNet background removal")
             
             try:
                 print(f"🔄 Initializing {self._bg_model} background removal model with providers: {providers}")
