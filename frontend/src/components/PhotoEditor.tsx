@@ -20,7 +20,7 @@ const PhotoEditor: React.FC<PhotoEditorProps> = ({ prepareData, onPhotoGenerated
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [canvasScale, setCanvasScale] = useState(1);
-  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
+  const [canvasOffset] = useState({ x: 0, y: 0 });
 
   const imageRef = useRef<HTMLImageElement>(new Image());
 
@@ -60,7 +60,7 @@ const PhotoEditor: React.FC<PhotoEditorProps> = ({ prepareData, onPhotoGenerated
 
     const imageData = `data:image/${prepareData.image_format.toLowerCase()};base64,${prepareData.image_data}`;
     image.src = imageData;
-  }, [prepareData]);
+  }, [prepareData, drawCanvas]);
 
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -122,16 +122,7 @@ const PhotoEditor: React.FC<PhotoEditorProps> = ({ prepareData, onPhotoGenerated
     drawCanvas();
   }, [drawCanvas]);
 
-  const getMousePosition = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: (e.clientX - rect.left) / canvasScale,
-      y: (e.clientY - rect.top) / canvasScale,
-    };
-  };
+  // Mouse position utility function removed - was unused
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;

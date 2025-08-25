@@ -211,3 +211,69 @@ backend/media/uploads/
 tmp/
 # Node module
 frontend/node_modules/
+# bin
+bin/
+
+# Additional deployment-specific ignores
+# Environment files (deployment specific)
+.env.production
+
+# SSL certificates and keys
+*.key
+*.pem
+*.crt
+*.p12
+ssl/
+certs/
+
+# Secrets and sensitive data
+.secrets
+*.secret
+secrets.yml
+secrets.yaml
+
+# Docker volumes and data directories
+mysql_data/
+redis_data/
+media_files/
+grafana_data/
+prometheus_data/
+nginx_logs/
+
+# Backup directories
+/opt/backups/
+*.backup
+*.bak
+
+# Local development tools
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Act local runner
+.actrc
+
+# Temporary and log files
+*.tmp
+*.temp
+.tmp/
+logs/
+/var/log/
+
+# Model files (large AI models)
+*.pt
+*.pth
+*.onnx
+*.pb
+models/

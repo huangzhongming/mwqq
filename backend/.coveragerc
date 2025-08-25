@@ -1,0 +1,21 @@
+[run]
+source = .
+omit = 
+    */venv/*
+    */migrations/*
+    */tests.py
+    */test_*.py
+    */settings.py
+    */wsgi.py
+    manage.py
+    config-*.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+
+[html]
+directory = htmlcov
