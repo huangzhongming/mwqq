@@ -174,12 +174,12 @@ jobs:
         sed -i 's|context: ./frontend||g' docker-compose.test.yml
         sed -i 's|dockerfile: Dockerfile||g' docker-compose.test.yml
         
-        # Start services
-        docker-compose -f docker-compose.test.yml up -d --no-build
+        # Start services (using docker compose v2)
+        docker compose -f docker-compose.test.yml up -d --no-build
         sleep 30
         
         # Basic health checks
         curl -f http://localhost:80 || exit 1
         
         # Cleanup
-        docker-compose -f docker-compose.test.yml down
+        docker compose -f docker-compose.test.yml down
